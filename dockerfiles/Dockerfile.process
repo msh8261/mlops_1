@@ -1,0 +1,25 @@
+FROM python:3.9-slim
+
+# Install necessary system packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        make \
+        ca-certificates \
+        curl \
+        gnupg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install Python dependencies
+COPY ../requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy your application code (optional; depends on your next steps)
+# COPY . .
+
+# Define default command (optional)
+# CMD ["python", "your_app.py"]
