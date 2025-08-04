@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches: [ develop ]
+    tags:
+      - 'v*'
+
+jobs:
+  build_conda_pack:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build conda package
+        run: make build_conda_pack
+
+  run_unit_tests:
+    runs-on: ubuntu-20.04
+    needs: build_conda_pack
+    container:
+      image: msh8261/mlops_1:processor
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest==7.4.0 pytest-cov==4.1.0
+
+      - name: Run unit tests with coverage
+        run: |
+          pytest --cov=src --cov-report=xml tests
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
