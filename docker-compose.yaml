@@ -1,0 +1,79 @@
+
+services:
+  localstack:
+    image: localstack/localstack
+    container_name: localstack
+    ports:
+      - "4566:4566"  # LocalStack Gateway
+      - "4510-4559:4510-4559"  # LocalStack services
+    env_file:
+      - ./docker_env/aws_credentials.env
+      - ./docker_env/localstack.env
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - default
+  db:
+    image: postgres:13
+    container_name: postgres
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile.postgres
+    env_file:
+      - ./docker_env/postgres.env
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+
+  mlflow:
+    image: mlflow:v1.0.0
+    container_name: mlflow
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile.mlflow
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./docker_env/aws_credentials.env
+      - ./docker_env/postgres.env
+      - ./docker_env/mlflow.env
+    entrypoint: /bin/sh -c "/scripts/run_mlflow.sh"
+    depends_on:
+      - localstack
+      - db
+    networks:
+      - default
+
+  process:
+    image: processor:v1.0.0
+    container_name: process
+    build:
+      context: .
+      dockerfile: ./dockerfiles/Dockerfile.process
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./docker_env/aws_credentials.env
+      - ./docker_env/postgres.env
+      - ./docker_env/process.env
+      - ./docker_env/mlflow.env
+      - ./docker_env/prefect.env
+    working_dir: /root/src
+    entrypoint: tail -f /dev/null
+    volumes:
+      - "./src:/root/src"
+      - "./tests:/root/tests"
+      - "./data/raw:/data/raw"
+      - "./data/processed:/data/processed"
+    depends_on:
+      - localstack
+      - mlflow
+    networks:
+      - default
+
+
+
+
+
